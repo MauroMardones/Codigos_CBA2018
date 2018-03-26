@@ -1,0 +1,377 @@
+---
+title: "AJUSTES Y RESIDUOS MAE0318 - ANCHOVETA V-X REGIONES"
+author: "María José Zúñiga"
+date: "7 de diciembre de 2017"
+output: word_document
+---
+
+```{r echo=FALSE, warning=FALSE}
+rm(list=ls())   
+library(stringr)
+library(knitr)
+source("C:\\Users\\mariajose.zuniga\\Google Drive\\DER-codes\\pelagicos\\anchoveta centro - sur\\Salidas\\funciones\\functions.R")  
+dir.2<-"C:\\Users\\mariajose.zuniga\\Google Drive\\DER-codes\\pelagicos\\anchoveta centro - sur\\EvalStock_CBA2018"
+setwd(dir.2)
+
+#system("admb MAE0318")
+system("MAE0318")
+#------------------------------------------------
+dat.file   = "MAE0318.dat"
+data.0        <- lisread(paste(dir.2,dat.file, sep='/'));
+names(data.0) <-  str_trim(names(data.0), side="right")
+data.1        <- data.0
+rep      <- reptoRlist("mae0318.rep")                                               
+std      <- read.table("mae0318.std",header=T,sep="",na="NA",fill=T) 
+YTP    <- subset(std,name=="YTP")$value[1];YTP
+```
+
+```{r echo=FALSE }
+# ============================================================================== #
+# I. INDICES DE ABUNDANCIA                                                       #
+# ============================================================================== #
+#years  <- data.1$Ind[,1]                                                              
+years  <- rep$years
+nyears <- data.1$nanos                                                                
+age    <- seq(0,4,1)                    
+nage   <- data.1$nedades                                                            
+Amax   <- data.1$nedades        
+Age    <- seq(0,4,1) 
+#Observado                                                                      
+obsR <- rep$reclasobs       ;obsR[obsR<=1] <-NA                                 
+obsP <- rep$pelacesobs      ;obsP[obsP<=1] <-NA                                 
+obsM <- rep$mphobs          ;obsM[obsM<=1] <-NA                                 
+obsD <- rep$desembarqueobs                                                      
+#predicho                   #stdpredicho                                        
+predR <- rep$reclaspred     ;stdpredR <- subset(std,name=="Reclas_pred")$std                
+predP <- rep$pelacespred    ;stdpredP <- subset(std,name=="Pelaces_pred")$std               
+predM <- rep$mphpred        ;stdpredM <- subset(std,name=="MPH_pred")$std                   
+predD <- rep$desembarquepred                                                    
+#Residuos                                                                       
+Res_reclas   <-log(obsR)-log(predR)                                             
+Res_Pelaces  <-log(obsP)-log(predP)                                             
+Res_MPH      <-log(obsM)-log(predM)                                             
+Res_Desemb   <-log(obsD)-log(predD)     
+
+x  <-c(years,rev(years))
+x1 <-c(years[1],years[nyears]+1,nyears+1/2) #xaxp
+x2 <-c(years[1]-1,years[nyears]+1) #xlim
+
+cvreclas<-rep(0.30,nyears)
+cvpela<-rep(0.30,nyears)
+cvdes<-rep(0.01,nyears)
+
+obsR95i <- obsR*exp(-1.96*cvreclas);obsR95s <-obsR*exp(1.96*cvreclas)
+obsP95i <- obsP*exp(-1.96*cvpela);obsP95s <-obsP*exp(1.96*cvpela)
+obsD95i <- obsD*exp(-1.96*cvdes);obsD95s <-obsD*exp(1.96*cvdes)
+```
+
+```{r echo=FALSE,fig.height=8,fig.width=5}
+# ============================================================================== #
+# 1. AJUSTES                                                                    
+# ============================================================================== #
+par(mfrow=c(3,1),mar=c(2,4,2,1)+0.5) 
+	par(mar=c(4,4,1,1)+0.5)
+plot(years,predR/10^6,type="l",cex.axis=1.1,xlim=x2,xaxp=x1,lwd=2,
+	ylim=c(0,3),xaxs= "i",yaxs= "i",ylab="Cruceros de Verano (t*10^6)",las=1,xlab="",cex.lab=1.5)
+arrows(x0=years,y0=obsR95i/10^6,x1=years,y1=obsR95s/10^6,length=0.05,angle=90,col=4,lty=1,code=3)
+points(years,obsR/10^6,cex=1.5,bg="white",pch=21)
+
+par(mar=c(4,4,1,1)+0.5)
+plot(years,predP/10^6,type="l",cex.axis=1.1,xlim=x2,xaxp=x1,lwd=2,
+	ylim=c(0,4),xaxs= "i",yaxs= "i",ylab="Cruceros de Otoño (t*10^6)",las=1,xlab="",cex.lab=1.5)
+arrows(x0=years,y0=obsP95i/10^6,x1=years,y1=obsP95s/10^6,length=0.05,angle=90,col=4,lty=1,code=3)
+points(years,obsP/10^6,cex=1.5,bg="white",pch=21)
+           
+y4<-predD*10^-6
+par(mar=c(4,4,1,1)+0.5)
+plot(years,y4,type="n",cex.axis=1.1,xlim=x2,xaxp=x1,cex.lab=1.4,
+	ylim=c(0,max(y4)+0.05),xaxs="i",yaxs="i",ylab="Desembarques (t*10^6)",las=1,xlab="")
+lines(years,predD/10^6,lwd=2,lty=1)
+arrows(x0=years,y0=obsD95i/10^6,x1=years,y1=obsD95s/10^6,length=0.05,angle=90,col=4,lty=1,code=3)
+points(years,obsD/10^6,cex=0.8,bg="white",pch=21)
+```
+
+**Figura 1.** Ajuste del modelo anual en edades (MAE0318) a los valores de biomasas de cruceros de (a) verano y (b) otoño y (c) desembarques de anchoveta de la V-X regiones. Las barras corresponden al intervalo de confianza asintótico y el círculo al valor del estimador central.
+
+
+
+
+### 2. ANALISIS DE RESIDUALES                                  
+#### residuales, qqnorm, histograma  
+```{r echo=FALSE,fig.height=7,fig.width=7}
+
+par(mfrow=c(2,2),mar=c(2,4,2,1)+0.5)
+	plot(years,Res_Desemb,xaxp=x1,cex.axis=0.8,ylim=c(-0.01,0.01),type="h",main="Desembarques",ylab="Residuales (escala log)",xlab="")
+	abline(h=0,col="darkgray")
+	plot(log(predD),Res_Desemb, ylim=c(-0.01,0.01),main="Residuales vs ajustado",ylab="Residuales",xlab="Valor ajustado")
+	abline(h=0,col="darkgray")
+	hist(Res_Desemb,xlim=c(-0.01,0.01),xlab="Residuales",ylab="Frecuencia",main="Histograma de Residuos")
+	qqnorm(Res_Desemb,ylim=c(-0.01,0.01)); qqline(Res_Desemb, col = 2)
+```
+**Figura 2.** Análisis de residuales (escala log) del ajuste del modelo base actual (MAE0318) a los datos observados de los **desembarques**.
+
+
+```{r echo=FALSE,fig.height=7,fig.width=7}
+par(mfrow=c(2,2),mar=c(2,4,2,1)+0.5)
+	plot(years,Res_reclas,xaxp=x1,cex.axis=0.8,type="h",main="Cruceros de Verano",ylab="Residuales (escala log)",xlab="")
+	abline(h=0,col="darkgray")
+	plot(log(predR),Res_reclas, main="Residuales vs ajustado",ylab="Residuales",xlab="Valor ajustado")
+	abline(h=0,col="darkgray")
+	hist(Res_reclas,xlab="Residuales",ylab="Frecuencia",main="Histograma de Residuos")
+	qqnorm(Res_reclas); qqline(Res_reclas, col = 2)
+```
+**Figura 3.** Análisis de residuales (escala log) del ajuste del modelo base actual (MAE0318) a los datos observados de biomasas del **Crucero de verano**.
+
+
+```{r echo=FALSE,fig.height=7,fig.width=7}
+	par(mfrow=c(2,2),mar=c(2,4,2,1)+0.5)
+	plot(years,Res_Pelaces,xaxp=x1,cex.axis=0.8,type="h",main="Cruceros de Otoño",ylab="Residuales (escala log)",xlab="")
+	abline(h=0,col="darkgray")
+	plot(log(predP),Res_Pelaces, main="Residuales vs ajustado",ylab="Residuales",xlab="Valor ajustado")
+	abline(h=0,col="darkgray")
+	hist(Res_Pelaces,xlab="Residuales",ylab="Frecuencia",main="Histograma de Residuos")
+	qqnorm(Res_Pelaces); qqline(Res_Pelaces, col = 2)
+```
+**Figura 4.** Análisis de residuales (escala log) del ajuste del modelo base actual (MAE0318) a los datos observados de biomasas del **Crucero de otoño**.
+
+
+### II. COMPOSICIÓN EDAD DE LAS CAPTURAS
+```{r echo=FALSE}
+
+#age <-dat$"#Edades"                                         
+age  <-seq(0,4,1)                                            
+nage<-length(age)                                            
+#ProporciÃ³n observada                                        
+pobsF<-rep$pf_obs                                              
+pobsR<-rep$pobs_RECLAS                                       
+pobsP<-rep$pobs_PELACES                                      
+#ProporciÃ³n predicha                                         
+ppredF<-rep$pf_pred                                          
+ppredR<-rep$ppred_RECLAS                                     
+ppredP<-rep$ppred_PELACES                                    
+resfl <-matrix(ncol=nage,nrow=nyears)                         
+for(i in 1:nyears){                                          
+	for(j in 1:nage){                                          
+		resfl[,j]<-pobsF[,j]-ppredF[,j]}}                        
+#Proporciones                                                
+pF   <- c(pobsF,ppredF); pF[pF==0]  <-NA                     
+pR   <- c(pobsR,ppredR); pR[pR==0]  <-NA                     
+pP   <- c(pobsP,ppredP); pP[pP==0]  <-NA                     
+#arreglos                                                    
+edad <- rep(gl((length(age)),length(years),label=age),2)     
+anos <- rep(years,length(age)*2)                             
+ind  <- c(rep("capt_obs",length(years)*length(age)),         
+	rep("capt_est",length(years)*length(age)))        
+pro  <- data.frame(anos,edad,ind,pF,pR,pP)  
+```
+
+```{r echo=FALSE}
+library(lattice)                                             
+akey<- list(text = list(c("observado", "predicho"),cex = 1),
+	border=F,lines=list(cex=c(0,1.5),lwd=c(0,2.5),col=c(1,2)))
+
+```
+
+```{r echo=FALSE,fig.height=7,fig.width=7}
+xyplot(pF ~ edad|as.factor(years), groups =ind, type = c("l","p"),pch=c("","o"),
+		cex=c(0,1.5),lwd=c(2.5,0),lty=c(1,0),col=c("red","black"),ylab="Proporción de Captura",
+		xlab="Edad",layout = c(5, 6),as.table = TRUE)
+```
+**Figura 5.** Ajuste del modelo base actual (MAE0318) a las composiciones de edades de las **capturas de la flota** anchoveta de la V-X Regiones. *El año 2018 es el predicho por el modelo*.
+
+```{r echo=FALSE,fig.height=7,fig.width=7}
+xyplot(pR  ~ edad|as.factor(years), groups =ind, type = c("l","p"),pch=c("","o"),
+		cex=c(0,1.5),lwd=c(2.5,0),lty=c(1,0),col=c("red","black"),ylab="Proporción de los Cruceros de Verano",
+		xlab="Edad",layout = c(5,6),as.table = TRUE)
+```
+**Figura 6.** Ajuste del modelo base actual (MAE0318) a las composiciones de edades de los **Cruceros de verano** anchoveta de la V-X regiones. *El año 2018 es el predicho por el modelo*.
+
+
+```{r echo=FALSE,fig.height=7,fig.width=7}
+xyplot(pP  ~ edad|as.factor(years), groups =ind, type = c("l","p"),pch=c("","o"),
+		cex=c(0,1.5),lwd=c(2.5,0),lty=c(1,0),col=c("red","black"),ylab="Proporción de los Cruceros de Otoño",
+		xlab="Edad",layout = c(5,6),as.table = TRUE)
+```
+**Figura 7.** Ajuste del modelo base actual (MAE0318) a las composiciones de edades de los **Cruceros de otoño** anchoveta de la V-X regiones. *El año 2018 es el predicho por el modelo*.
+
+#### ANALISIS DE RESIDUALES COMPOSICIÓN DE EDAD 
+
+```{r echo=FALSE}
+#============================================================#
+p_obs        <- c(t(pobsF))                                  #
+p_recl_obs   <- c(t(pobsR))                                  #
+p_pela_obs   <- c(t(pobsP))                                  #
+p_pred    	 <- c(t(ppredF))                                 # 
+p_recl_pred  <- c(t(ppredR))                                 #
+p_pela_pred  <- c(t(ppredP))                                 #
+resd_flo     <- p_obs-p_pred                                 #
+resd_reclas  <- p_recl_obs-p_recl_pred                       #  
+resd_pelaces <- p_pela_obs-p_pela_pred                       # 
+#============================================================#
+# FLOTA                                                                                      
+anos2 <- matrix((gl((length(years)),length(age),label=years)),ncol=1)                       
+edad2 <- matrix((gl((length(age)),length(years),label=age)),ncol=1)     
+```
+
+```{r echo=FALSE,fig.height=7,fig.width=7}
+par(mfrow=c(2,2),mar=c(4,4,1,1)+0.5)                                                        
+boxplot(resd_flo~anos2,cex.axis=0.8,main="Flota",ylab="Residuales",xlab="Años")  
+abline(h=0,col="darkgray")                                                                  
+boxplot(resd_flo~edad2,cex.axis=0.8,main="Flota",ylab="Residuales",xlab="Edades (años)")    
+abline(h=0,col="darkgray")                                                                  
+plot((p_pred),resd_flo, main="Residuales vs ajustado",ylab="Residuales",xlab="Valor ajustado") 
+abline(h=0,col="darkgray")                                                                  
+hist(resd_flo)    
+```
+**Figura 8.** Residuales del modelo base actual (MAE0318) a las composiciones de edad de las **capturas de la flota** por edad y año.
+
+```{r echo=FALSE}
+# RECLAS                                                                                    
+resr<-matrix(ncol=nage,nrow=nyears)
+for(i in 1:nyears){
+	for(j in 1:nage){
+		resr[,j]<-pobsR[,j]-ppredR[,j]}}
+
+resd_reclas <- c(t(resr[11:nyears,]))
+anos3       <- matrix((gl((length(years[11:nyears])),length(age),label=years[11:nyears])),ncol=1)
+edad3       <- matrix((gl((length(age)),length(years[11:nyears]),label=age)),ncol=1)        
+```
+
+```{r echo=FALSE,fig.height=7,fig.width=7}
+par(mfrow=c(2,2),mar=c(4,4,1,1)+0.5)                                                        
+boxplot(resd_reclas~anos3,cex.axis=0.8,main="CRUCERO DE VERANO",ylab="Residuales",xlab="Años")                
+abline(h=0,col="darkgray")                                                      
+abline(h=0,col="darkgray")                                                                  
+boxplot(resd_reclas~edad3,cex.axis=0.8,main="",ylab="Residuales",xlab="Edades (años)")      
+plot(c(t(ppredR[11:nyears,])),resd_reclas, main="Residuales vs ajustado",ylab="Residuales",xlab="Valor ajustado") 
+abline(h=0,col="darkgray")                                                                  
+hist(resd_reclas)  
+```
+**Figura 9.** Residuales del modelo base actual (MAE0318) a las composiciones de edad de los **cruceros de verano** por edad y año.
+
+
+```{r echo=FALSE}
+# PELACES                                                                                   
+resp<-matrix(ncol=nage,nrow=nyears)
+for(i in 1:nyears){
+	for(j in 1:nage){
+		resp[,j]<-pobsP[,j]-ppredP[,j] }}
+resd_pelaces <-c(t(resp[17:nyears,]))
+anos4        <- matrix((gl((length(years[17:nyears])),length(age),label=years[17:nyears])),ncol=1)
+edad4        <- matrix((gl((length(age)),length(years[17:nyears]),label=age)),ncol=1)
+
+```
+
+
+```{r echo=FALSE,fig.height=7,fig.width=7}
+par(mfrow=c(2,2),mar=c(4,4,1,1)+0.5)
+boxplot(resd_pelaces~anos4,cex.axis=0.8,main="CRUCERO DE OTOÑO",ylab="Residuales",xlab="Años")
+abline(h=0,col="darkgray")
+boxplot(resd_pelaces~edad4,cex.axis=0.8,main="",ylab="Residuales",xlab="")
+abline(h=0,col="darkgray")
+plot(c(t(ppredP[17:nyears,])),resd_pelaces, main="Residuales vs ajustado",ylab="Residuales",xlab="Valor ajustado")
+abline(h=0,col="darkgray")
+hist(resd_pelaces)
+```
+
+**Figura 10.** Residuales del modelo base actual (MAE0318) a las composiciones de edad de los **cruceros de otoño** por edad y año.
+
+# RESIDUALES DE COMPOSICIÓN DE EDADES 
+
+```{r echo=FALSE}
+anos<-years
+obsF <-pobsF
+preF <-ppredF  
+resF <-obsF-preF
+
+rng <-range(resF,na.rm=T)
+dd  <-dim(resF)
+est <-matrix(NA,nrow=dd[1],ncol=dd[2])
+
+for(j in 1:dd[1]){for(k in 1:dd[2]){val<-resF[j,k]
+if(val>0){est[j,k]<-val/rng[2]}
+else{est[j,k]<-val/rng[1]*-1}}}
+```
+
+```{r echo=FALSE,fig.height=7,fig.width=5}
+par(mar=c(5.4,6.7,2,1),cex.axis=1,cex.lab=1.1)
+image(age,anos,t(est),col=0,yaxt="n",xlab="",ylab="")
+ee  <-dim(est)
+for(n in 1:ee[1]){for(m in 1:ee[2]){vol<-est[n,m]
+if(is.na(vol)==FALSE){
+	if(vol>0){points(age[m],anos[n],pch=19,cex=2.82*sqrt(vol),col=1)}
+	if(vol<0){points(age[m],anos[n],pch=1,cex=2.82*sqrt(vol*-1),col=1)}
+}}}
+
+mtext("Flota",side=3,cex=1.2)
+mtext("Edades",side=1,line=3.2,cex=1.1);posi<-seq(1,57,by=4)
+axis(2,at=anos,labels=anos,las=2)
+mtext("Años",side=2,line=4.7,cex=1.1)
+box()
+```
+
+```{r echo=FALSE,fig.height=7,fig.width=5}
+anos<-years[11:nyears]
+obsR <-pobsR[11:nyears,]
+preR <-ppredR[11:nyears,]
+resR <-obsR-preR
+
+rng <-range(resR,na.rm=T)
+dd  <-dim(resR)
+est <-matrix(NA,nrow=dd[1],ncol=dd[2])
+
+for(j in 1:dd[1]){for(k in 1:dd[2]){val<-resR[j,k]
+if(val>0){est[j,k]<-val/rng[2]}
+else{est[j,k]<-val/rng[1]*-1}}}
+```
+
+
+```{r echo=FALSE,fig.height=7,fig.width=5}
+par(mar=c(5.4,6.7,2,1),cex.axis=1,cex.lab=1.1)
+image(age,anos,t(est),col=0,yaxt="n",xlab="",ylab="")
+ee  <-dim(est)
+for(n in 1:ee[1]){for(m in 1:ee[2]){vol<-est[n,m]
+if(is.na(vol)==FALSE){
+	if(vol>0){points(age[m],anos[n],pch=19,cex=2.82*sqrt(vol),col=1)}
+	if(vol<0){points(age[m],anos[n],pch=1,cex=2.82*sqrt(vol*-1),col=1)}
+}}}
+mtext("Crucero de verano",side=3,cex=1.2)
+mtext("Edades",side=1,line=3.2,cex=1.1);posi<-seq(1,57,by=4)
+axis(2,at=anos,labels=anos,las=2)
+mtext("Años",side=2,line=4.7,cex=1.1)
+box()
+```
+
+
+```{r echo=FALSE}
+anos<-years[17:nyears]
+obsP <-pobsP[17:nyears,]
+preP <-ppredP[17:nyears,]  
+resP <-obsP-preP
+
+rng <-range(resP,na.rm=T)
+dd  <-dim(resP)
+est <-matrix(NA,nrow=dd[1],ncol=dd[2])
+
+for(j in 1:dd[1]){for(k in 1:dd[2]){val<-resP[j,k]
+if(val>0){est[j,k]<-val/rng[2]}
+else{est[j,k]<-val/rng[1]*-1}}}
+```
+
+```{r echo=FALSE,fig.height=7,fig.width=5}
+par(mar=c(5.4,6.7,2,1),cex.axis=1,cex.lab=1.1)
+image(age,anos,t(est),col=0,yaxt="n",xlab="",ylab="")
+ee  <-dim(est)
+for(n in 1:ee[1]){for(m in 1:ee[2]){vol<-est[n,m]
+if(is.na(vol)==FALSE){
+	if(vol>0){points(age[m],anos[n],pch=19,cex=2.82*sqrt(vol),col=1)}
+	if(vol<0){points(age[m],anos[n],pch=1,cex=2.82*sqrt(vol*-1),col=1)}
+}}}
+mtext("Crucero de otoño",side=3,cex=1.2)
+mtext("Edades",side=1,line=3.2,cex=1.1);posi<-seq(1,57,by=4)
+axis(2,at=anos,labels=anos,las=2)
+mtext("Años",side=2,line=4.7,cex=1.1)
+box()
+```
+
+**Figura 11.** Residuales de las estructuras de edades de a) la Flota, b) cruceros de verano (RECLAS) y c) cruceros de otoño (PELACES). Subestimaciones (círculos negros) y sobreestimaciones (circulo blanco), donde el tamaño corresponde a la magnitud relativa de error por edad.
